@@ -28,7 +28,8 @@ namespace BizContacts
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
-            var connection = @"Server=(localdb)\mssqllocaldb;Database=EFGetStarted.AspNetCore.NewDb;Trusted_Connection=True;ConnectRetryCount=0";
+            // todo: devopsamafy this later
+            var connection = @"Server=localhost\SQLEXPRESS;Database=master;Trusted_Connection=True;";
             services.AddDbContext<BizContactContext>
                 (options => options.UseSqlServer(connection, x => x.MigrationsAssembly("BizContacts.API")));
         }
