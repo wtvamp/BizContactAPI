@@ -32,6 +32,8 @@ namespace BizContacts
             var connection = @"Server=localhost\SQLEXPRESS;Database=master;Trusted_Connection=True;";
             services.AddDbContext<BizContactContext>
                 (options => options.UseSqlServer(connection, x => x.MigrationsAssembly("BizContacts.API")));
+            services.AddDbContext<BizContactIdentityContext>
+                (options => options.UseSqlServer(connection, x => x.MigrationsAssembly("BizContacts.API")));
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
