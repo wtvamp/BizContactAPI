@@ -23,7 +23,7 @@ namespace BizContacts
 {
     public class Startup
     {
-        private const string SecretKey = "iNivDmHLpUA223sqsfhqGbMRdRj1PVkH"; // todo: devopsamafy this
+        private const string SecretKey = "iNivDmHLpUA223sqsfhqGbMRdRj1PVkH"; // todo: secret key for encrypting jwt - devopsamafy this
    
         private readonly SymmetricSecurityKey _signingKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(SecretKey));
 
@@ -38,7 +38,8 @@ namespace BizContacts
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
-            // todo: devopsamafy this later
+
+            // todo: connection strings - devopsamafy this later
             var contactsConnection = @"Server=localhost\SQLEXPRESS;Database=bizcontacts;Trusted_Connection=True;";
             var identityConnection = @"Server=localhost\SQLEXPRESS;Database=bizidentity;Trusted_Connection=True;";
             services.AddDbContext<BizContactContext>
@@ -46,18 +47,21 @@ namespace BizContacts
             services.AddDbContext<BizContactIdentityContext>
                 (options => options.UseSqlServer(identityConnection, x => x.MigrationsAssembly("BizContacts.API")));
 
+            // Adding JWT Factory
             services.AddSingleton<IJwtFactory, JwtFactory>();
 
+            // Add Identity support
             services.AddDefaultIdentity<BizContactIdentity>()
                 .AddEntityFrameworkStores<BizContactIdentityContext>();
+               
+            // Add AutoMapper for ViewModel to DTO mapping
             services.AddAutoMapper();
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new Info { Title = "Biz Contacts API", Version = "v1" });
             });
 
-            // jwt wire up
-            // Get options from app settings
+            // JWT wire up - get options from app settings
             var jwtAppSettingOptions = Configuration.GetSection(nameof(JwtIssuerOptions));
 
             // Configure JwtIssuerOptions
@@ -67,7 +71,8 @@ namespace BizContacts
                 options.Audience = jwtAppSettingOptions[nameof(JwtIssuerOptions.Audience)];
                 options.SigningCredentials = new SigningCredentials(_signingKey, SecurityAlgorithms.HmacSha256);
             });
-            // Add JWT
+
+            // Configure JWT Token
             var tokenValidationParameters = new TokenValidationParameters
             {
                 ValidateIssuer = true,
@@ -84,6 +89,7 @@ namespace BizContacts
                 ClockSkew = TimeSpan.Zero
             };
 
+            // Add JWT Authentication
             services.AddAuthentication(options =>
             {
                 options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -116,7 +122,7 @@ namespace BizContacts
             // specifying the Swagger JSON endpoint.
             app.UseSwaggerUI(c =>
             {
-                c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1");
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", "Identity API");
             });
             app.UseMvc();
         }
