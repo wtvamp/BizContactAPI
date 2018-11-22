@@ -13,6 +13,7 @@ using Microsoft.Extensions.Options;
 using BizContacts.DAL;
 using Microsoft.EntityFrameworkCore;
 using Swashbuckle.AspNetCore.Swagger;
+using AutoMapper;
 
 namespace BizContacts
 {
@@ -30,12 +31,15 @@ namespace BizContacts
         {
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
             // todo: devopsamafy this later
-            var connection = @"Server=localhost\SQLEXPRESS;Database=master;Trusted_Connection=True;";
+            var contactsConnection = @"Server=localhost\SQLEXPRESS;Database=bizcontacts;Trusted_Connection=True;";
+            var identityConnection = @"Server=localhost\SQLEXPRESS;Database=bizidentity;Trusted_Connection=True;";
             services.AddDbContext<BizContactContext>
-                (options => options.UseSqlServer(connection, x => x.MigrationsAssembly("BizContacts.API")));
+                (options => options.UseSqlServer(contactsConnection, x => x.MigrationsAssembly("BizContacts.API")));
             services.AddDbContext<BizContactIdentityContext>
-                (options => options.UseSqlServer(connection, x => x.MigrationsAssembly("BizContacts.API")));
-
+                (options => options.UseSqlServer(identityConnection, x => x.MigrationsAssembly("BizContacts.API")));
+            services.AddDefaultIdentity<BizContactIdentity>()
+                .AddEntityFrameworkStores<BizContactIdentityContext>();
+            services.AddAutoMapper();
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new Info { Title = "Biz Contacts API", Version = "v1" });

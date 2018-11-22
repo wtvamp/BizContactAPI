@@ -7,7 +7,7 @@ namespace BizContacts.API.ViewModel.Validations.Mappings
     {
         public ViewModelToEntityMappingProfile()
         {
-              CreateMap<RegistrationViewModel,BizContactIdentity>().ForMember(au => au.UserName, map => map.MapFrom(vm => vm.FirstName));
+              CreateMap<RegistrationViewModel,BizContactIdentity>().ForMember(au => au.UserName, map => map.MapFrom(vm => vm.Email));
         }
     }
 }

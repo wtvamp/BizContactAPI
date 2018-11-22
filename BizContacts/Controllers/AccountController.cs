@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using BizContacts.DAL;
 using BizContacts.API.Helpers;
 
-namespace DotNetGigs.Controllers
+namespace BizContacts.API.Controllers
 {
     [Route("api/[controller]")]
     public class AccountsController : Controller
