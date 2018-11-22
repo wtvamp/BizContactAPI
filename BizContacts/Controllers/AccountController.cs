@@ -37,7 +37,7 @@ namespace BizContacts.API.Controllers
 
             if (!result.Succeeded) return new BadRequestObjectResult(Errors.AddErrorsToModelState(result, ModelState));
 
-            await _appDbContext.BizContactIdentities.AddAsync(new BizContactIdentity { Id = userIdentity.Id, FirstName = model.FirstName });
+            //await _appDbContext.BizContactIdentities.AddAsync(new BizContactIdentity { Id = userIdentity.Id, FirstName = model.FirstName });
             await _appDbContext.SaveChangesAsync();
 
             return new OkObjectResult("Account created");
