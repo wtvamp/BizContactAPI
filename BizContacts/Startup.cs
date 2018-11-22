@@ -18,6 +18,7 @@ using BizContacts.API;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using FluentValidation.AspNetCore;
 
 namespace BizContacts
 {
@@ -37,8 +38,6 @@ namespace BizContacts
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
-
             // todo: connection strings - devopsamafy this later
             var contactsConnection = @"Server=localhost\SQLEXPRESS;Database=bizcontacts;Trusted_Connection=True;";
             var identityConnection = @"Server=localhost\SQLEXPRESS;Database=bizidentity;Trusted_Connection=True;";
@@ -50,14 +49,23 @@ namespace BizContacts
             // Adding JWT Factory
             services.AddSingleton<IJwtFactory, JwtFactory>();
 
-            // Add Identity support
-            services.AddDefaultIdentity<BizContactIdentity>()
-                .AddEntityFrameworkStores<BizContactIdentityContext>();
-               
-            // Add AutoMapper for ViewModel to DTO mapping
-            services.AddAutoMapper();
             services.AddSwaggerGen(c =>
             {
+                // Swagger 2.+ support
+                var security = new Dictionary<string, IEnumerable<string>>
+                {
+                    {"Bearer", new string[] { }},
+                };
+
+                c.AddSecurityDefinition("Bearer", new ApiKeyScheme
+                {
+                    Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
+                    Name = "Authorization",
+                    In = "header",
+                    Type = "apiKey"
+                });
+                c.AddSecurityRequirement(security);
+
                 c.SwaggerDoc("v1", new Info { Title = "Biz Contacts API", Version = "v1" });
             });
 
@@ -92,6 +100,7 @@ namespace BizContacts
             // Add JWT Authentication
             services.AddAuthentication(options =>
             {
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
                 options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
                 options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
             }).AddJwtBearer(options =>
@@ -99,6 +108,20 @@ namespace BizContacts
                 options.TokenValidationParameters = tokenValidationParameters;
                 options.SaveToken = true;
             });
+
+            // Add single api user claim policy - we can add more as needed
+            services.AddAuthorization(options =>
+            {
+                options.AddPolicy("ApiUser", policy => policy.RequireClaim("rol", "api_access"));
+            });
+
+            // Add Identity support
+            services.AddDefaultIdentity<BizContactIdentity>()
+                .AddEntityFrameworkStores<BizContactIdentityContext>();
+
+            services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1).AddFluentValidation(fv => fv.RegisterValidatorsFromAssemblyContaining<Startup>());
+            // Add AutoMapper for ViewModel to DTO mapping
+            services.AddAutoMapper();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -124,6 +147,7 @@ namespace BizContacts
             {
                 c.SwaggerEndpoint("/swagger/v1/swagger.json", "Identity API");
             });
+            app.UseAuthentication();
             app.UseMvc();
         }
     }
