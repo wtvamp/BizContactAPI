@@ -6,9 +6,11 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using BizContacts.DAL;
+using Microsoft.AspNetCore.Authorization;
 
 namespace BizContacts.API.Controllers
 {
+    [Authorize(Policy = "ApiUser")]
     [Route("api/[controller]")]
     [ApiController]
     public class BizContactsController : ControllerBase

@@ -12,11 +12,22 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using BizContacts.DAL;
 using Microsoft.EntityFrameworkCore;
+using Swashbuckle.AspNetCore.Swagger;
+using AutoMapper;
+using BizContacts.API;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using FluentValidation.AspNetCore;
 
 namespace BizContacts
 {
     public class Startup
     {
+        private const string SecretKey = "iNivDmHLpUA223sqsfhqGbMRdRj1PVkH"; // todo: secret key for encrypting jwt - devopsamafy this
+   
+        private readonly SymmetricSecurityKey _signingKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(SecretKey));
+
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
@@ -27,13 +38,90 @@ namespace BizContacts
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
-            // todo: devopsamafy this later
-            var connection = @"Server=localhost\SQLEXPRESS;Database=master;Trusted_Connection=True;";
+            // todo: connection strings - devopsamafy this later
+            var contactsConnection = @"Server=localhost\SQLEXPRESS;Database=bizcontacts;Trusted_Connection=True;";
+            var identityConnection = @"Server=localhost\SQLEXPRESS;Database=bizidentity;Trusted_Connection=True;";
             services.AddDbContext<BizContactContext>
-                (options => options.UseSqlServer(connection, x => x.MigrationsAssembly("BizContacts.API")));
+                (options => options.UseSqlServer(contactsConnection, x => x.MigrationsAssembly("BizContacts.API")));
             services.AddDbContext<BizContactIdentityContext>
-                (options => options.UseSqlServer(connection, x => x.MigrationsAssembly("BizContacts.API")));
+                (options => options.UseSqlServer(identityConnection, x => x.MigrationsAssembly("BizContacts.API")));
+
+            // Adding JWT Factory
+            services.AddSingleton<IJwtFactory, JwtFactory>();
+
+            services.AddSwaggerGen(c =>
+            {
+                // Swagger 2.+ support
+                var security = new Dictionary<string, IEnumerable<string>>
+                {
+                    {"Bearer", new string[] { }},
+                };
+
+                c.AddSecurityDefinition("Bearer", new ApiKeyScheme
+                {
+                    Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
+                    Name = "Authorization",
+                    In = "header",
+                    Type = "apiKey"
+                });
+                c.AddSecurityRequirement(security);
+
+                c.SwaggerDoc("v1", new Info { Title = "Biz Contacts API", Version = "v1" });
+            });
+
+            // JWT wire up - get options from app settings
+            var jwtAppSettingOptions = Configuration.GetSection(nameof(JwtIssuerOptions));
+
+            // Configure JwtIssuerOptions
+            services.Configure<JwtIssuerOptions>(options =>
+            {
+                options.Issuer = jwtAppSettingOptions[nameof(JwtIssuerOptions.Issuer)];
+                options.Audience = jwtAppSettingOptions[nameof(JwtIssuerOptions.Audience)];
+                options.SigningCredentials = new SigningCredentials(_signingKey, SecurityAlgorithms.HmacSha256);
+            });
+
+            // Configure JWT Token
+            var tokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidIssuer = jwtAppSettingOptions[nameof(JwtIssuerOptions.Issuer)],
+
+                ValidateAudience = true,
+                ValidAudience = jwtAppSettingOptions[nameof(JwtIssuerOptions.Audience)],
+
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = _signingKey,
+
+                RequireExpirationTime = false,
+                ValidateLifetime = false,
+                ClockSkew = TimeSpan.Zero
+            };
+
+            // Add JWT Authentication
+            services.AddAuthentication(options =>
+            {
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            }).AddJwtBearer(options =>
+            {
+                options.TokenValidationParameters = tokenValidationParameters;
+                options.SaveToken = true;
+            });
+
+            // Add single api user claim policy - we can add more as needed
+            services.AddAuthorization(options =>
+            {
+                options.AddPolicy("ApiUser", policy => policy.RequireClaim("rol", "api_access"));
+            });
+
+            // Add Identity support
+            services.AddDefaultIdentity<BizContactIdentity>()
+                .AddEntityFrameworkStores<BizContactIdentityContext>();
+
+            services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1).AddFluentValidation(fv => fv.RegisterValidatorsFromAssemblyContaining<Startup>());
+            // Add AutoMapper for ViewModel to DTO mapping
+            services.AddAutoMapper();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -49,6 +137,17 @@ namespace BizContacts
             }
 
             app.UseHttpsRedirection();
+
+            // Enable middleware to serve generated Swagger as a JSON endpoint.
+            app.UseSwagger();
+
+            // Enable middleware to serve swagger-ui (HTML, JS, CSS, etc.), 
+            // specifying the Swagger JSON endpoint.
+            app.UseSwaggerUI(c =>
+            {
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", "Identity API");
+            });
+            app.UseAuthentication();
             app.UseMvc();
         }
     }

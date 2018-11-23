@@ -20,7 +20,7 @@
     "BizContacts": {
       "commandName": "Project",
       "launchBrowser": true,
-      "launchUrl": "api/BizContacts/5",
+      "launchUrl": "swagger",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       },
