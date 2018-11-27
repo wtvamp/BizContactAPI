@@ -38,6 +38,9 @@ namespace BizContacts
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            // Add CORS
+            services.AddCors();
+
             // todo: connection strings - devopsamafy this later
             var contactsConnection = @"Server=localhost\SQLEXPRESS;Database=bizcontacts;Trusted_Connection=True;";
             var identityConnection = @"Server=localhost\SQLEXPRESS;Database=bizidentity;Trusted_Connection=True;";
@@ -137,7 +140,9 @@ namespace BizContacts
             }
 
             app.UseHttpsRedirection();
-
+            app.UseCors(builder =>
+                builder.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader().AllowCredentials().WithOrigins("http://localhost:4200")
+            );
             // Enable middleware to serve generated Swagger as a JSON endpoint.
             app.UseSwagger();
 
